@@ -1,6 +1,6 @@
 # dotfiles
 
-A central place for my terminal, shell, and dev environment configs, plus the Claude Code skills I'm building.
+A central place for my terminal, shell, and dev environment configs, plus the skills I'm building.
 
 ## Layout
 
@@ -8,5 +8,5 @@ A central place for my terminal, shell, and dev environment configs, plus the Cl
 .
 ├── shell/        # .zshrc
 ├── terminal/     # ghosty.config, cursor-dark.omp.json (Oh My Posh theme)
-└── skills/       # Claude Code skills
+└── skills/       # skills
 ```
