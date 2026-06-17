@@ -52,8 +52,18 @@ for an interactive or printable plan.
 
 4. **Tell the user** the path and that it's a single portable file they can open,
    commit, email, or render to PDF. The artifact ships with a screen-only toolbar
-   (Expand all / Collapse all / Print–PDF / Reset progress) — that's template
-   chrome, so you don't author it.
+   and an editable Notes box — both template chrome, so you don't author them:
+   - **Expand all / Collapse all** — toggle every phase.
+   - **Copy remaining as prompt** — serializes the *unchecked* tasks (grouped by
+     phase) plus the notes into a paste-ready prompt, so whoever holds the plan can
+     hand the remaining work to the next agent mid-flight.
+   - **Copy as Markdown** — the whole plan as Markdown (checkbox state preserved)
+     for Slack/PR/another prompt.
+   - **Reset progress** — clears the checklist (asks first).
+
+   The export reads `details.phase` → `label.task` → `.task-text` straight from the
+   DOM, so the *only* thing that makes it useful is clean task markup — another
+   reason to express real work as `.task` checkboxes (below), not loose prose.
 
 ## Revising an existing plan
 

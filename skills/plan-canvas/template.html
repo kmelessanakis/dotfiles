@@ -123,6 +123,13 @@
   ol.changelog-list .who { font-weight: 600; }
   ol.changelog-list .empty { color: var(--muted); font-style: italic; }
 
+  /* notes (editable scratchpad, persisted + exported) */
+  .notes { margin: 28px 0 0; }
+  .notes-box { min-height: 64px; border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 12px 14px; background: var(--code-bg); line-height: 1.6; white-space: pre-wrap; }
+  .notes-box:focus { outline: none; border-color: var(--accent); }
+  .notes-box:empty::before { content: attr(data-placeholder); color: var(--muted); }
+
   h2 { font-size: 1.3rem; margin: 28px 0 10px; }
   h3 { font-size: 1.08rem; margin: 20px 0 8px; }
   a { color: var(--accent); }
@@ -154,10 +161,16 @@
 <nav class="toolbar" aria-label="Plan controls">
   <button type="button" id="pc-expand">Expand all</button>
   <button type="button" id="pc-collapse">Collapse all</button>
+  <button type="button" id="pc-copy-remaining">Copy remaining as prompt</button>
+  <button type="button" id="pc-copy-md">Copy as Markdown</button>
   <button type="button" id="pc-reset">Reset progress</button>
 </nav>
 <div class="wrap">
 <!--PLAN_BODY-->
+<section class="notes" aria-label="Notes">
+  <h2>Notes</h2>
+  <div id="pc-notes" class="notes-box" contenteditable="true" data-placeholder="Jot progress, blockers, or decisions here — saved in this browser and included when you copy the plan."></div>
+</section>
 </div>
 
 <script>
@@ -209,6 +222,104 @@
     boxes.forEach(function (b) { b.checked = false; });
     try { localStorage.removeItem(KEY); } catch (e) {}
     updateProgress();
+  });
+
+  // editable notes — persisted in this browser, folded into exports
+  var notesEl = document.getElementById('pc-notes');
+  var NOTES_KEY = KEY + ":notes";
+  if (notesEl) {
+    try { notesEl.textContent = localStorage.getItem(NOTES_KEY) || ""; } catch (e) {}
+    notesEl.addEventListener('input', function () {
+      try { localStorage.setItem(NOTES_KEY, notesEl.textContent); } catch (e) {}
+    });
+  }
+  function notesText() { return notesEl ? notesEl.textContent.trim() : ""; }
+
+  // serialize the plan from the live DOM (reflecting checkbox state)
+  function planTitle() {
+    var h = document.querySelector('header.plan-head h1') || document.querySelector('h1');
+    return h ? h.textContent.replace(/\s+/g, ' ').trim() : 'Plan';
+  }
+  function collectPhases(remainingOnly) {
+    var phases = [];
+    document.querySelectorAll('details.phase').forEach(function (ph) {
+      var sum = ph.querySelector('summary');
+      var title = sum ? sum.textContent.replace(/\s+/g, ' ').trim() : '';
+      var tasks = [];
+      ph.querySelectorAll('label.task').forEach(function (l) {
+        var cb = l.querySelector('input[type=checkbox]');
+        var tEl = l.querySelector('.task-text') || l;
+        var txt = tEl.textContent.replace(/\s+/g, ' ').trim();
+        var done = !!(cb && cb.checked);
+        if (remainingOnly && done) return;
+        if (txt) tasks.push({ done: done, txt: txt });
+      });
+      if (remainingOnly && !tasks.length) return; // skip finished phases
+      phases.push({ title: title, tasks: tasks });
+    });
+    return phases;
+  }
+  function toMarkdown() {
+    var out = ['# ' + planTitle(), ''];
+    collectPhases(false).forEach(function (p) {
+      out.push('## ' + p.title);
+      p.tasks.forEach(function (t) { out.push('- [' + (t.done ? 'x' : ' ') + '] ' + t.txt); });
+      out.push('');
+    });
+    var n = notesText();
+    if (n) { out.push('## Notes', n, ''); }
+    return out.join('\n').trim() + '\n';
+  }
+  function toPrompt() {
+    var phases = collectPhases(true);
+    var remaining = phases.reduce(function (s, p) { return s + p.tasks.length; }, 0);
+    var out = [];
+    if (!remaining) {
+      out.push('All tasks in "' + planTitle() + '" are checked off — nothing left to do.');
+    } else {
+      out.push('Pick up this plan in progress and complete the remaining tasks below. '
+        + 'Keep the existing structure; check the referenced files before editing.', '');
+      out.push('Plan: ' + planTitle(), '');
+      phases.forEach(function (p) {
+        out.push('## ' + p.title);
+        p.tasks.forEach(function (t) { out.push('- ' + t.txt); });
+        out.push('');
+      });
+    }
+    var n = notesText();
+    if (n) { out.push('Notes from the team:', n, ''); }
+    return out.join('\n').trim() + '\n';
+  }
+
+  function copyText(text, btn) {
+    var orig = btn ? btn.textContent : null;
+    function flash(msg) {
+      if (!btn) return;
+      btn.textContent = msg;
+      setTimeout(function () { btn.textContent = orig; }, 1200);
+    }
+    function fallback() {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        var ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        flash(ok ? 'Copied!' : 'Copy failed');
+      } catch (e) { flash('Copy failed'); }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { flash('Copied!'); }, fallback);
+    } else { fallback(); }
+  }
+
+  var btnCopyRemaining = document.getElementById('pc-copy-remaining');
+  var btnCopyMd = document.getElementById('pc-copy-md');
+  if (btnCopyRemaining) btnCopyRemaining.addEventListener('click', function () {
+    copyText(toPrompt(), btnCopyRemaining);
+  });
+  if (btnCopyMd) btnCopyMd.addEventListener('click', function () {
+    copyText(toMarkdown(), btnCopyMd);
   });
 
   // open all collapsibles for printing/pdf, then restore
