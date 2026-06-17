@@ -5,8 +5,10 @@ description: >-
   work to a teammate or an agent. Use when the user (a team lead) asks to write,
   generate, or hand off a plan/spec/proposal as an HTML file (not markdown), or
   mentions /plans, a "plan canvas", or an interactive/printable plan. Produces a
-  single offline .html in ./plans with collapsible phases and persistent task
-  checklists; renders in a browser or IDE preview and exports to PDF via Playwright.
+  single offline .html in ./plans with collapsible phases, persistent task
+  checklists, an in-page toolbar (expand/collapse all, print/PDF, reset progress),
+  and a changelog that tracks edits across regenerations; renders in a browser or
+  IDE preview and exports to PDF via Playwright.
 ---
 
 # Plan Canvas
@@ -37,16 +39,38 @@ for an interactive or printable plan.
 3. **Assemble** into the output file:
    ```bash
    python3 <skill-dir>/assemble.py /tmp/plan-body.html plans/<slug>.html \
-     --title "Short plan title"
+     --title "Short plan title" --change "Initial plan." --author "Kostas"
    ```
    - Output goes in **`./plans/`** (project-relative), created if missing.
    - `<slug>` is kebab-case (e.g. `auth-rate-limiting.html`). The slug also keys
      localStorage, so keep filenames stable across regenerations to preserve a
      teammate's checkbox progress.
    - `--title` is optional; if omitted it's derived from the first `<h1>`.
+   - `--change` / `--author` add a dated changelog entry (see *Revising* below).
+     On a brand-new plan you can pass `--change "Initial plan."` or omit it — the
+     script auto-seeds an "Initial plan." entry on first generation.
 
 4. **Tell the user** the path and that it's a single portable file they can open,
-   commit, email, or render to PDF.
+   commit, email, or render to PDF. The artifact ships with a screen-only toolbar
+   (Expand all / Collapse all / Print–PDF / Reset progress) — that's template
+   chrome, so you don't author it.
+
+## Revising an existing plan
+
+When you (or another agent) change a plan that already exists, **regenerate to the
+same path** so checkbox progress and changelog history are preserved, and record
+what changed with `--change`:
+
+```bash
+python3 <skill-dir>/assemble.py /tmp/plan-body.html plans/auth-rate-limiting.html \
+  --change "Split phase 2 into middleware + tests; added Redis fallback risk." \
+  --author "agent"
+```
+
+The script reads the prior artifact at that path, carries its changelog entries
+forward, and prepends the new dated entry — so the artifact tells the story of how
+the plan evolved. Keep the changelog placeholder in the body (below) every time;
+the merge needs it.
 
 ## Component vocabulary
 
@@ -58,8 +82,7 @@ Write the body using these classes/elements — they're all styled by the templa
 <header class="plan-head">
   <h1>Rate-limit the auth endpoints</h1>
   <div class="meta">
-    <span><b>Owner:</b> Kostas</span>
-    <span><b>Hand off to:</b> @teammate / agent</span>
+    <span><b>Owner:</b> <!--PLAN_OWNER--></span>
     <span><b>Date:</b> 2026-06-17</span>
     <span class="pill doing">In progress</span>
   </div>
@@ -72,6 +95,9 @@ Write the body using these classes/elements — they're all styled by the templa
 ```
 > Always include the `.progress` block with the exact ids `pc-progress-fill` and
 > `pc-progress-label` — the script fills them from the checklist state.
+>
+> Leave `<!--PLAN_OWNER-->` in the Owner field as-is: `assemble.py` fills it from
+> `git config user.name` (override with `--owner "Name"`). Don't hardcode a name.
 
 **Phases (collapsible, open by default, auto-expanded when printed):**
 ```html
@@ -104,6 +130,19 @@ Write the body using these classes/elements — they're all styled by the templa
     <ul><li>Assumption: …</li><li>Open question: …</li></ul>
   </div>
   ```
+- **Changelog** (include once, near the end): a record of how the plan evolved.
+  Always emit the list with the exact id and placeholder so `assemble.py` can merge
+  prior history into it:
+  ```html
+  <section class="changelog">
+    <h2>Changelog</h2>
+    <ol class="changelog-list" id="pc-changelog-list"><!--PLAN_CHANGELOG--></ol>
+  </section>
+  ```
+  > Leave the `<ol>` empty apart from `<!--PLAN_CHANGELOG-->`. The script fills it:
+  > the new `--change` entry on top, then everything from the previous artifact.
+  > Don't hand-write `<li>` entries — pass them via `--change` so dates and order
+  > stay consistent.
 
 **Diagrams — inline SVG only.** When a flow/architecture/sequence diagram helps,
 hand-author it as inline SVG (no external runtime is bundled). Wrap it so it

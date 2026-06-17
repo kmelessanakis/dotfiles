@@ -101,6 +101,28 @@
     border-radius: var(--radius); padding: 16px 20px; margin: 24px 0; }
   .handoff h2 { margin-top: 0; }
 
+  /* toolbar (screen-only chrome, supplied by the template) */
+  .toolbar { position: fixed; top: 14px; right: 14px; z-index: 50;
+    display: flex; flex-wrap: wrap; gap: 6px; }
+  .toolbar button { font: inherit; font-size: 0.8rem; line-height: 1;
+    color: var(--fg); background: var(--bg); border: 1px solid var(--line);
+    border-radius: 8px; padding: 7px 11px; cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .toolbar button:hover { background: var(--accent-soft); border-color: var(--accent); }
+
+  /* changelog */
+  .changelog { margin: 28px 0 0; }
+  ol.changelog-list { list-style: none; margin: 12px 0; padding: 0;
+    border-left: 2px solid var(--line); }
+  ol.changelog-list li { position: relative; padding: 6px 0 6px 18px; margin: 0;
+    font-size: 0.94rem; }
+  ol.changelog-list li::before { content: ""; position: absolute; left: -5px; top: 13px;
+    width: 8px; height: 8px; border-radius: 999px; background: var(--accent); }
+  ol.changelog-list time { font-family: var(--mono); font-size: 0.82em;
+    color: var(--muted); margin-right: 8px; }
+  ol.changelog-list .who { font-weight: 600; }
+  ol.changelog-list .empty { color: var(--muted); font-style: italic; }
+
   h2 { font-size: 1.3rem; margin: 28px 0 10px; }
   h3 { font-size: 1.08rem; margin: 20px 0 8px; }
   a { color: var(--accent); }
@@ -122,11 +144,18 @@
     details.phase > summary::before { display: none; }
     label.task:hover, details.phase > summary:hover { background: none; }
     .handoff { break-inside: avoid; }
+    .changelog { break-inside: avoid; }
+    .toolbar { display: none; }
     a { color: #000; text-decoration: underline; }
   }
 </style>
 </head>
 <body>
+<nav class="toolbar" aria-label="Plan controls">
+  <button type="button" id="pc-expand">Expand all</button>
+  <button type="button" id="pc-collapse">Collapse all</button>
+  <button type="button" id="pc-reset">Reset progress</button>
+</nav>
 <div class="wrap">
 <!--PLAN_BODY-->
 </div>
@@ -165,6 +194,22 @@
     b.addEventListener('change', function () { persist(); updateProgress(); });
   });
   updateProgress();
+
+  // toolbar controls (supplied by the template, screen-only)
+  function setAllPhases(open) {
+    document.querySelectorAll('details.phase').forEach(function (d) { d.open = open; });
+  }
+  var btnExpand = document.getElementById('pc-expand');
+  var btnCollapse = document.getElementById('pc-collapse');
+  var btnReset = document.getElementById('pc-reset');
+  if (btnExpand) btnExpand.addEventListener('click', function () { setAllPhases(true); });
+  if (btnCollapse) btnCollapse.addEventListener('click', function () { setAllPhases(false); });
+  if (btnReset) btnReset.addEventListener('click', function () {
+    if (!boxes.length || !window.confirm('Clear all checked tasks for this plan?')) return;
+    boxes.forEach(function (b) { b.checked = false; });
+    try { localStorage.removeItem(KEY); } catch (e) {}
+    updateProgress();
+  });
 
   // open all collapsibles for printing/pdf, then restore
   var collapsedForPrint = [];
