@@ -1,34 +1,35 @@
 ---
 name: plan-canvas
 description: >-
-  Generate a self-contained, human-readable HTML plan artifact for handing off work to a teammate or an agent. Use when the user requests to generate, or hand off a plan/spec/proposal as an HTML file (not markdown), or mentions /plans, a "plan canvas", Handoff or /handoff. Produces a single offline .html in ./plans with collapsible phases, persistent task checklists, an in-page toolbar (expand/collapse all, copy remaining work as a prompt, copy as Markdown, reset progress), an editable notes box, and a changelog that tracks edits across regenerations; renders in a browser or IDE preview and exports to PDF via Playwright.
+  Generate a self-contained, human-readable HTML plan artifact for handing off work to a teammate or an agent. Use whenever the user wants to write up, generate, or hand off a plan/spec/proposal — especially as HTML rather than markdown — or mentions a handoff, /handoff, /plans, a "plan canvas", or an interactive/printable plan. Strongly prefer this skill any time "handoff" or "hand off" comes up in the context of passing work to a developer or agent. Produces a single offline .html in ./plans with collapsible phases, persistent task checklists, an in-page toolbar (expand/collapse all, copy remaining work as a prompt, copy as Markdown, reset progress), an editable notes box, and a changelog that tracks edits across regenerations; renders in any browser or IDE preview and prints cleanly.
 ---
   
 # Plan Canvas
 
-Turns a plan you've worked out into a polished, **self-contained HTML artifact** for handoff. One file, no server, no network, no build step. It opens in any browser or IDE preview pane, and prints/exports to PDF cleanly (e.g. Playwright `page.pdf()`).
+Turns a plan you've worked out into a polished, **self-contained HTML artifact** for handoff. One file, no server, no network, no build step. It opens in any browser or IDE preview pane, and prints cleanly.
 
 ## When to use
 
-The user is a team lead who hands plans to developers or agents and wants HTML instead of markdown. Trigger on requests like "write this up as a plan", "generate a handoff doc", "make a plan canvas", "put this in /plans", or any ask for an interactive or printable plan.
+The user is a team lead who hands plans to developers or agents and wants HTML instead of markdown. Trigger on requests like "write this up as a plan", "hand this off to …", "generate a handoff doc", "/handoff", "make a plan canvas", "put this in /plans", or any ask for an interactive or printable plan. Treat the word **handoff** (or "hand off") as a strong signal even when the user doesn't say "HTML" — this skill is the default way to package work for someone else to pick up.
 
 ## Workflow
 
 1. **Do the thinking first.** Figure out the actual plan — phases, tasks, files to touch, risks, acceptance criteria — before writing any HTML. The artifact is a presentation layer; the substance is the plan itself.
 
-2. **Write the body** as an HTML fragment to a temp file (e.g. `/tmp/plan-body.html`). This is everything that goes *inside* the page; do not write `<html>`, `<head>`, `<style>`, or `<script>` — the template supplies all chrome, CSS, and JS. Use the component vocabulary below.
+2. **Write the body** as an HTML fragment to a scratch file in the output folder, `./plans/.plan-body.html` (create `./plans/` if needed) — keep everything inside the project workspace, not `/tmp`, since sandboxed agents like Copilot can only write within the workspace. The leading dot keeps it out of a `plans/*.html` listing. This file is everything that goes *inside* the page; do not write `<html>`, `<head>`, `<style>`, or `<script>` — the template supplies all chrome, CSS, and JS. Use the component vocabulary below. It's a throwaway — delete it once you've assembled (step 3).
 
-3. **Assemble** into the output file:
+3. **Assemble** into the output file, then remove the scratch body:
    ```bash
-   python3 <skill-dir>/assemble.py /tmp/plan-body.html plans/<slug>.html \
+   python3 <skill-dir>/assemble.py plans/.plan-body.html plans/<slug>.html \
      --title "Short plan title" --change "Initial plan." --author "Kostas"
+   rm plans/.plan-body.html
    ```
    - Output goes in **`./plans/`** (project-relative), created if missing.
    - `<slug>` is kebab-case (e.g. `auth-rate-limiting.html`). The slug also keys localStorage, so keep filenames stable across regenerations to preserve a teammate's checkbox progress.
    - `--title` is optional; if omitted it's derived from the first `<h1>`.
    - `--change` / `--author` add a dated changelog entry (see *Revising* below). On a brand-new plan you can pass `--change "Initial plan."` or omit it — the script auto-seeds an "Initial plan." entry on first generation.
 
-4. **Tell the user** the path and that it's a single portable file they can open, commit, email, or render to PDF. The artifact ships with a screen-only toolbar and an editable Notes box — both template chrome, so you don't author them:
+4. **Tell the user** the path and that it's a single portable file they can open, commit, email, or print. The artifact ships with a screen-only toolbar and an editable Notes box — both template chrome, so you don't author them:
    - **Expand all / Collapse all** — toggle every phase.
    - **Copy remaining as prompt** — serializes the *unchecked* tasks (grouped by phase) plus the notes into a paste-ready prompt, so whoever holds the plan can hand the remaining work to the next agent mid-flight.
    - **Copy as Markdown** — the whole plan as Markdown (checkbox state preserved) for Slack/PR/another prompt.
@@ -41,7 +42,7 @@ The user is a team lead who hands plans to developers or agents and wants HTML i
 When you (or another agent) change a plan that already exists, **regenerate to the same path** so checkbox progress and changelog history are preserved, and record what changed with `--change`:
 
 ```bash
-python3 <skill-dir>/assemble.py /tmp/plan-body.html plans/auth-rate-limiting.html \
+python3 <skill-dir>/assemble.py plans/.plan-body.html plans/auth-rate-limiting.html \
   --change "Split phase 2 into middleware + tests; added Redis fallback risk." \
   --author "agent"
 ```
@@ -126,17 +127,3 @@ Keep diagrams simple; prefer a clear table or list when a diagram wouldn't add m
 - **Checklists are the unit of progress.** Express actionable work as `.task` checkboxes so the progress bar and localStorage persistence are meaningful.
 - **Plain HTML in the body.** No frameworks, no inline `<style>`/`<script>` in the body unless a one-off diagram genuinely needs a tiny inline `<style>`.
 - Default phases to `open` so the plan reads top-to-bottom and prints fully.
-
-## Export to PDF (optional)
-
-If the user wants a PDF, render the generated file with Playwright:
-```python
-from playwright.sync_api import sync_playwright
-with sync_playwright() as p:
-    b = p.chromium.launch()
-    pg = b.new_page()
-    pg.goto("file:///abs/path/to/plans/<slug>.html")
-    pg.pdf(path="plans/<slug>.pdf", print_background=True, format="A4")
-    b.close()
-```
-Collapsed phases auto-expand for print, and on-screen-only affordances are hidden.
