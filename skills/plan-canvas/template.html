@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><!--PLAN_TITLE--></title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1c20;
+    --muted: #5c6370;
+    --line: #e3e6ea;
+    --accent: #2f6feb;
+    --accent-soft: #eaf1ff;
+    --done: #1a7f47;
+    --doing: #b5760a;
+    --todo: #5c6370;
+    --code-bg: #f5f6f8;
+    --warn-bg: #fff6e6;
+    --warn-line: #e0a72e;
+    --radius: 10px;
+    --maxw: 880px;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181d; --fg: #e6e8eb; --muted: #9aa3af; --line: #2a2e36;
+      --accent: #6ea0ff; --accent-soft: #1e2636; --done: #4ec77f; --doing: #e0a72e;
+      --code-bg: #1d2026; --warn-bg: #2a2517; --warn-line: #8a6d1f;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: var(--sans); font-size: 16px; line-height: 1.6;
+  }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 40px 24px 120px; }
+  header.plan-head { border-bottom: 1px solid var(--line); padding-bottom: 20px; margin-bottom: 8px; }
+  header.plan-head h1 { font-size: 1.9rem; line-height: 1.25; margin: 0 0 10px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--muted); font-size: 0.9rem; }
+  .meta b { color: var(--fg); font-weight: 600; }
+
+  /* progress */
+  .progress { position: sticky; top: 0; z-index: 5; background: var(--bg);
+    padding: 12px 0 14px; margin-bottom: 8px; border-bottom: 1px solid var(--line); }
+  .progress .bar { height: 8px; background: var(--line); border-radius: 999px; overflow: hidden; }
+  .progress .bar > span { display: block; height: 100%; width: 0; background: var(--accent);
+    transition: width .25s ease; border-radius: 999px; }
+  .progress .label { font-size: 0.82rem; color: var(--muted); margin-top: 6px; }
+
+  /* pills */
+  .pill { display: inline-block; font-size: 0.72rem; font-weight: 600; letter-spacing: .02em;
+    text-transform: uppercase; padding: 2px 9px; border-radius: 999px; border: 1px solid currentColor; }
+  .pill.todo { color: var(--todo); }
+  .pill.doing { color: var(--doing); }
+  .pill.done { color: var(--done); }
+
+  /* phases (collapsible) */
+  details.phase { border: 1px solid var(--line); border-radius: var(--radius);
+    margin: 18px 0; overflow: hidden; background: var(--bg); }
+  details.phase > summary { list-style: none; cursor: pointer; padding: 16px 20px;
+    display: flex; align-items: center; gap: 12px; font-weight: 650; font-size: 1.12rem;
+    background: linear-gradient(0deg, transparent, transparent); }
+  details.phase > summary::-webkit-details-marker { display: none; }
+  details.phase > summary::before { content: "▸"; color: var(--muted); font-size: .9em;
+    transition: transform .15s ease; }
+  details.phase[open] > summary::before { transform: rotate(90deg); }
+  details.phase > summary:hover { background: var(--accent-soft); }
+  .phase-body { padding: 4px 20px 20px; border-top: 1px solid var(--line); }
+  .phase-num { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  /* tasks / checklist */
+  .tasks { list-style: none; margin: 12px 0; padding: 0; }
+  .tasks li { margin: 0; }
+  label.task { display: flex; gap: 10px; align-items: baseline; padding: 7px 8px;
+    border-radius: 8px; cursor: pointer; }
+  label.task:hover { background: var(--accent-soft); }
+  label.task input { margin: 0; width: 17px; height: 17px; flex: 0 0 auto; transform: translateY(2px); accent-color: var(--accent); }
+  label.task input:checked ~ .task-text { color: var(--muted); text-decoration: line-through; }
+  .task-text { flex: 1; }
+
+  /* file refs + code */
+  code, .file { font-family: var(--mono); font-size: 0.88em; }
+  :not(pre) > code, .file { background: var(--code-bg); padding: 1px 6px; border-radius: 6px; }
+  .file { color: var(--accent); white-space: nowrap; }
+  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 14px 16px; overflow-x: auto; line-height: 1.5; }
+  pre code { background: none; padding: 0; }
+
+  /* callouts */
+  .note, .warn { border-radius: var(--radius); padding: 12px 16px; margin: 14px 0;
+    border: 1px solid var(--line); background: var(--code-bg); }
+  .warn { background: var(--warn-bg); border-color: var(--warn-line); }
+  .note > :first-child, .warn > :first-child { margin-top: 0; }
+  .note > :last-child, .warn > :last-child { margin-bottom: 0; }
+
+  /* handoff block */
+  .handoff { border: 1px solid var(--accent); background: var(--accent-soft);
+    border-radius: var(--radius); padding: 16px 20px; margin: 24px 0; }
+  .handoff h2 { margin-top: 0; }
+
+  h2 { font-size: 1.3rem; margin: 28px 0 10px; }
+  h3 { font-size: 1.08rem; margin: 20px 0 8px; }
+  a { color: var(--accent); }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 0.95rem; }
+  th, td { border: 1px solid var(--line); padding: 8px 12px; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); }
+  figure.diagram { margin: 18px 0; text-align: center; }
+  figure.diagram svg { max-width: 100%; height: auto; }
+  figure.diagram figcaption { color: var(--muted); font-size: 0.85rem; margin-top: 6px; }
+  hr { border: none; border-top: 1px solid var(--line); margin: 28px 0; }
+
+  /* print / pdf */
+  @media print {
+    :root { --bg: #fff; --fg: #000; --muted: #444; }
+    body { font-size: 12pt; }
+    .wrap { max-width: none; padding: 0; }
+    .progress { position: static; }
+    details.phase { break-inside: avoid; border-color: #bbb; }
+    details.phase > summary::before { display: none; }
+    label.task:hover, details.phase > summary:hover { background: none; }
+    .handoff { break-inside: avoid; }
+    a { color: #000; text-decoration: underline; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<!--PLAN_BODY-->
+</div>
+
+<script>
+(function () {
+  var PLAN_ID = "<!--PLAN_ID-->";
+  var KEY = "plan-canvas:" + PLAN_ID;
+
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('label.task input[type=checkbox]'));
+  boxes.forEach(function (b, i) { b.dataset.idx = i; });
+
+  // restore
+  var saved = {};
+  try { saved = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
+  boxes.forEach(function (b, i) { if (saved[i]) b.checked = true; });
+
+  function persist() {
+    var state = {};
+    boxes.forEach(function (b, i) { if (b.checked) state[i] = 1; });
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  // progress bar
+  var fill = document.getElementById('pc-progress-fill');
+  var label = document.getElementById('pc-progress-label');
+  function updateProgress() {
+    if (!boxes.length) return;
+    var done = boxes.filter(function (b) { return b.checked; }).length;
+    var pct = Math.round((done / boxes.length) * 100);
+    if (fill) fill.style.width = pct + "%";
+    if (label) label.textContent = done + " / " + boxes.length + " tasks done · " + pct + "%";
+  }
+
+  boxes.forEach(function (b) {
+    b.addEventListener('change', function () { persist(); updateProgress(); });
+  });
+  updateProgress();
+
+  // open all collapsibles for printing/pdf, then restore
+  var collapsedForPrint = [];
+  window.addEventListener('beforeprint', function () {
+    collapsedForPrint = [];
+    document.querySelectorAll('details.phase:not([open])').forEach(function (d) {
+      collapsedForPrint.push(d); d.open = true;
+    });
+  });
+  window.addEventListener('afterprint', function () {
+    collapsedForPrint.forEach(function (d) { d.open = false; });
+    collapsedForPrint = [];
+  });
+})();
+</script>
+</body>
+</html>
