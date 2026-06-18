@@ -8,6 +8,8 @@ description: >-
 
 Turns a plan you've worked out into a polished, **self-contained HTML artifact** for handoff. One file, no server, no network, no build step. It opens in any browser or IDE preview pane, and prints cleanly.
 
+The artifact uses a dark, purple-accented "handoff document" theme: a sticky app bar (brand + progress + controls), a two-column layout with an auto-generated contents rail, and numbered phase cards. All of that chrome is supplied by the template — you only author the plan body.
+
 ## When to use
 
 The user is a team lead who hands plans to developers or agents and wants HTML instead of markdown. Trigger on requests like "write this up as a plan", "hand this off to …", "generate a handoff doc", "/handoff", "make a plan canvas", "put this in /plans", or any ask for an interactive or printable plan. Treat the word **handoff** (or "hand off") as a strong signal even when the user doesn't say "HTML" — this skill is the default way to package work for someone else to pick up.
@@ -34,7 +36,7 @@ The user is a team lead who hands plans to developers or agents and wants HTML i
    - `--title` is optional; if omitted it's derived from the first `<h1>`.
    - `--change` / `--author` add a dated changelog entry (see *Revising* below). On a brand-new plan you can pass `--change "Initial plan."` or omit it — the script auto-seeds an "Initial plan." entry on first generation.
 
-4. **Tell the user** the path and that it's a single portable file they can open, commit, email, or print. The artifact ships with a screen-only toolbar and an editable Notes box — both template chrome, so you don't author them:
+4. **Tell the user** the path and that it's a single portable file they can open, commit, email, or print. The artifact ships with a screen-only toolbar (in the sticky app bar), a progress bar, an auto-built contents rail, and an editable Notes box — all template chrome, so you don't author them:
    - **Expand all / Collapse all** — toggle every phase.
    - **Copy remaining as prompt** — serializes the *unchecked* tasks (grouped by phase) plus the notes into a paste-ready prompt, so whoever holds the plan can hand the remaining work to the next agent mid-flight.
    - **Copy as Markdown** — the whole plan as Markdown (checkbox state preserved) for Slack/PR/another prompt.
@@ -49,34 +51,32 @@ When you (or another agent) change a plan that already exists, **regenerate to t
 ```bash
 python3 <skill-dir>/assemble.py plans/.plan-body.html plans/auth-rate-limiting.html \
   --change "Split phase 2 into middleware + tests; added Redis fallback risk." \
-  --author "agent"
+  --author "agent" --commit auto
 ```
 
 The script reads the prior artifact at that path, carries its changelog entries forward, and prepends the new dated entry — so the artifact tells the story of how the plan evolved. Keep the changelog placeholder in the body (below) every time; the merge needs it.
+
+**Recording the commit.** When an agent revises the doc as part of a committed change, pass `--commit` so the changelog row carries the commit ref. Use `--commit auto` (or `--commit HEAD`) to stamp the current HEAD short SHA, or pass an explicit SHA. If the work is committed *after* regenerating, run assemble once more with `--commit <sha>` (same `--change`) so the ref points at the real commit. The ref is linked to the `origin` remote's commit page when one can be derived (GitHub/GitLab/Bitbucket).
 
 ## Component vocabulary
 
 Write the body using these classes/elements — they're all styled by the template (light + dark, screen + print).
 
-**Header (start with this):**
+**Header (start the body with this):**
 ```html
 <header class="plan-head">
   <h1>Rate-limit the auth endpoints</h1>
   <div class="meta">
-    <span><b>Owner:</b> <!--PLAN_OWNER--></span>
+    <span><b>Created by:</b> <!--PLAN_OWNER--></span>
     <span><b>Date:</b> 2026-06-17</span>
-    <span class="pill doing">In progress</span>
   </div>
 </header>
-
-<div class="progress">
-  <div class="bar"><span id="pc-progress-fill"></span></div>
-  <div class="label" id="pc-progress-label"></div>
-</div>
 ```
-> Always include the `.progress` block with the exact ids `pc-progress-fill` and `pc-progress-label` — the script fills them from the checklist state.
+> **Don't author a progress bar.** Progress lives in the template's sticky app bar (ids `pc-progress-fill` / `pc-progress-label`) and is filled automatically from the checklist — the body should start straight at the `<header class="plan-head">`.
 >
-> Leave `<!--PLAN_OWNER-->` in the Owner field as-is: `assemble.py` fills it from `git config user.name` (override with `--owner "Name"`). Don't hardcode a name.
+> **Don't author a contents/TOC list.** The template builds the contents rail automatically from your `details.phase` summaries (when there are ≥2 phases), with scrollspy.
+>
+> Leave `<!--PLAN_OWNER-->` in the "Created by" field as-is: `assemble.py` fills it from `git config user.name` (override with `--owner "Name"`). Don't hardcode a name.
 
 **Phases (collapsible, open by default, auto-expanded when printed):**
 ```html
@@ -95,8 +95,7 @@ Write the body using these classes/elements — they're all styled by the templa
 ```
 
 **Other pieces:**
-- Status pills: `<span class="pill todo|doing|done">…</span>`
-- File / code refs: `<span class="file">path/to/file.ts:88</span>`, inline `<code>`
+- File / code refs: `<span class="file">path/to/file.ts:88</span>`, inline `<code>`. Always write the **full path** — the template auto-shortens long paths to just the filename on screen (full path on hover and in copied exports), so you never need to abbreviate yourself.
 - Code/commands: `<pre><code>…</code></pre>`
 - Callouts: `<div class="note">…</div>` and `<div class="warn">…</div>`
 - Tables: plain `<table>` (styled automatically)

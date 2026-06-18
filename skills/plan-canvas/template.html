@@ -6,171 +6,276 @@
 <title><!--PLAN_TITLE--></title>
 <style>
   :root {
-    --bg: #ffffff;
-    --fg: #1a1c20;
-    --muted: #5c6370;
-    --line: #e3e6ea;
-    --accent: #2f6feb;
-    --accent-soft: #eaf1ff;
-    --done: #1a7f47;
-    --doing: #b5760a;
-    --todo: #5c6370;
-    --code-bg: #f5f6f8;
-    --warn-bg: #fff6e6;
-    --warn-line: #e0a72e;
-    --radius: 10px;
-    --maxw: 880px;
+    /* dark, purple-tinted handoff theme */
+    --bg: #0a0711;
+    --bg-elev: #14101f;          /* card / table / code surfaces */
+    --bg-elev-2: #0e0b18;
+    --fg: #ece9f1;
+    --muted: #9b93ab;
+    --faint: #6b6479;
+    --line: rgba(255,255,255,0.08);
+    --line-strong: rgba(255,255,255,0.13);
+
+    /* purple accent sampled from the brand gradient (#8a62c6 → lifted for dark UI) */
+    --accent: #9a73e0;
+    --accent-bright: #b89bf0;
+    --accent-soft: rgba(138,98,198,0.13);
+    --accent-line: rgba(154,115,224,0.34);
+    --accent-glow: rgba(138,98,198,0.55);
+
+    --done: #3ecf8e;
+    --doing: var(--accent-bright);
+    --todo: #9b93ab;
+    --warn: #e0a84a;
+    --warn-soft: rgba(224,168,74,0.10);
+    --warn-line: rgba(224,168,74,0.34);
+    --info: #5aa9ff;
+
+    --code-bg: #0e0b18;
+    --radius: 12px;
+    --maxw: 1600px;
     --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #16181d; --fg: #e6e8eb; --muted: #9aa3af; --line: #2a2e36;
-      --accent: #6ea0ff; --accent-soft: #1e2636; --done: #4ec77f; --doing: #e0a72e;
-      --code-bg: #1d2026; --warn-bg: #2a2517; --warn-line: #8a6d1f;
-    }
+    --sans: "Helvetica Neue", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
   body {
     margin: 0; background: var(--bg); color: var(--fg);
-    font-family: var(--sans); font-size: 16px; line-height: 1.6;
+    font-family: var(--sans); font-size: 16px; line-height: 1.65;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+    min-height: 100vh; position: relative;
   }
-  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 40px 24px 120px; }
-  header.plan-head { border-bottom: 1px solid var(--line); padding-bottom: 20px; margin-bottom: 8px; }
-  header.plan-head h1 { font-size: 1.9rem; line-height: 1.25; margin: 0 0 10px; }
-  .meta { display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--muted); font-size: 0.9rem; }
+  /* soft purple glows echoing the brand gradient */
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(1000px 520px at 86% -10%, rgba(138,98,198,0.18), transparent 60%),
+      radial-gradient(760px 620px at 6% 112%, rgba(138,98,198,0.12), transparent 56%);
+  }
+  ::selection { background: rgba(154,115,224,0.32); }
+
+  /* ── app bar (chrome — sticky, holds brand + controls + progress) ── */
+  .appbar { position: sticky; top: 0; z-index: 40;
+    backdrop-filter: saturate(150%) blur(12px);
+    background: rgba(12,10,18,0.82);
+    border-bottom: 1px solid var(--line); }
+  .appbar-inner { max-width: var(--maxw); margin: 0 auto;
+    padding: 12px 32px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .docmeta { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .doc-title { font-weight: 700; font-size: 14px; letter-spacing: 0.01em;
+    max-width: 52ch; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .brand-sep { width: 1px; height: 15px; background: var(--line-strong); flex: 0 0 auto; }
+  .doc-date { font-size: 12.5px; color: var(--muted); letter-spacing: 0.02em;
+    white-space: nowrap; flex: 0 0 auto; }
+  .appbar-tools { display: flex; align-items: center; gap: 14px; margin-left: auto; flex-wrap: wrap; }
+  .appbar-progress { display: flex; align-items: center; gap: 10px; }
+  .appbar-progress .mini { width: 116px; height: 5px; border-radius: 99px;
+    background: rgba(255,255,255,0.09); overflow: hidden; }
+  .appbar-progress .mini > span { display: block; height: 100%; width: 0;
+    background: var(--accent); box-shadow: 0 0 10px var(--accent-glow);
+    border-radius: 99px; transition: width .3s ease; }
+  .appbar-progress .label { font-size: 12px; color: var(--faint);
+    font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* toolbar buttons (screen-only chrome) */
+  .toolbar { display: flex; flex-wrap: wrap; gap: 6px; }
+  .toolbar button { font: inherit; font-size: 0.76rem; font-weight: 600; letter-spacing: .01em;
+    line-height: 1; color: var(--muted); background: rgba(255,255,255,0.05);
+    border: 1px solid var(--line-strong); border-radius: 8px; padding: 7px 11px; cursor: pointer;
+    transition: color .15s, border-color .15s, background .15s; }
+  .toolbar button:hover { color: var(--fg); background: var(--accent-soft); border-color: var(--accent-line); }
+
+  /* ── layout: main column + sticky contents rail ── */
+  .layout { max-width: var(--maxw); margin: 0 auto; position: relative; z-index: 1;
+    padding: 0 32px 120px; display: flex; gap: 56px; align-items: flex-start; }
+  .plan-main { flex: 1 1 640px; min-width: 0; }
+
+  .toc { flex: 0 0 188px; position: sticky; top: 88px; align-self: flex-start;
+    padding-top: 64px; }
+  .toc[hidden] { display: none; }
+  .toc-title { font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--faint); font-weight: 700; margin-bottom: 14px; }
+  .toc-nav { display: flex; flex-direction: column; gap: 1px; border-left: 1px solid var(--line); }
+  .toc-nav a { display: flex; align-items: baseline; gap: 9px; padding: 6px 0 6px 14px;
+    margin-left: -1px; border-left: 2px solid transparent;
+    font-size: 13px; color: var(--muted); text-decoration: none; transition: color .15s, border-color .15s; }
+  .toc-nav a .n { font-variant-numeric: tabular-nums; font-size: 11px; opacity: .6; }
+  .toc-nav a:hover { color: var(--fg); }
+  .toc-nav a.active { color: var(--accent-bright); border-left-color: var(--accent); font-weight: 600; }
+
+  /* ── document header ── */
+  header.plan-head { padding: 56px 0 32px; margin-bottom: 8px;
+    border-bottom: 1px solid var(--line); }
+  header.plan-head h1 { font-size: 2.7rem; line-height: 1.06; letter-spacing: -0.02em;
+    margin: 0 0 18px; font-weight: 700; text-wrap: balance; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; color: var(--muted); font-size: 0.85rem; }
+  .meta > span { display: inline-flex; align-items: center; gap: 6px;
+    background: var(--bg-elev); border: 1px solid var(--line);
+    padding: 6px 12px; border-radius: 999px; }
   .meta b { color: var(--fg); font-weight: 600; }
 
-  /* progress */
-  .progress { position: sticky; top: 0; z-index: 5; background: var(--bg);
-    padding: 12px 0 14px; margin-bottom: 8px; border-bottom: 1px solid var(--line); }
-  .progress .bar { height: 8px; background: var(--line); border-radius: 999px; overflow: hidden; }
-  .progress .bar > span { display: block; height: 100%; width: 0; background: var(--accent);
-    transition: width .25s ease; border-radius: 999px; }
-  .progress .label { font-size: 0.82rem; color: var(--muted); margin-top: 6px; }
+  /* hidden: progress now lives in the app bar. A legacy body block stays out of sight. */
+  .plan-main .progress { display: none; }
 
-  /* pills */
-  .pill { display: inline-block; font-size: 0.72rem; font-weight: 600; letter-spacing: .02em;
-    text-transform: uppercase; padding: 2px 9px; border-radius: 999px; border: 1px solid currentColor; }
-  .pill.todo { color: var(--todo); }
-  .pill.doing { color: var(--doing); }
-  .pill.done { color: var(--done); }
-
-  /* phases (collapsible) */
+  /* ── phases (collapsible numbered cards) ── */
   details.phase { border: 1px solid var(--line); border-radius: var(--radius);
-    margin: 18px 0; overflow: hidden; background: var(--bg); }
+    margin: 16px 0; overflow: hidden; background: var(--bg-elev);
+    scroll-margin-top: 84px; transition: border-color .15s; }
+  details.phase[open] { border-color: var(--line-strong); }
   details.phase > summary { list-style: none; cursor: pointer; padding: 16px 20px;
-    display: flex; align-items: center; gap: 12px; font-weight: 650; font-size: 1.12rem;
-    background: linear-gradient(0deg, transparent, transparent); }
+    display: flex; align-items: center; gap: 12px; font-weight: 650; font-size: 1.1rem;
+    letter-spacing: -0.01em; }
   details.phase > summary::-webkit-details-marker { display: none; }
-  details.phase > summary::before { content: "▸"; color: var(--muted); font-size: .9em;
-    transition: transform .15s ease; }
-  details.phase[open] > summary::before { transform: rotate(90deg); }
+  details.phase > summary::after { content: "›"; margin-left: auto; color: var(--faint);
+    font-size: 1.3em; line-height: 1; transition: transform .18s ease; }
+  details.phase[open] > summary::after { transform: rotate(90deg); }
   details.phase > summary:hover { background: var(--accent-soft); }
+  .phase-num { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em; }
   .phase-body { padding: 4px 20px 20px; border-top: 1px solid var(--line); }
-  .phase-num { color: var(--muted); font-variant-numeric: tabular-nums; }
 
-  /* tasks / checklist */
+  /* ── tasks / checklist (custom checkbox) ── */
   .tasks { list-style: none; margin: 12px 0; padding: 0; }
   .tasks li { margin: 0; }
-  label.task { display: flex; gap: 10px; align-items: baseline; padding: 7px 8px;
-    border-radius: 8px; cursor: pointer; }
+  label.task { display: flex; gap: 11px; align-items: baseline; padding: 8px 10px;
+    border-radius: 9px; cursor: pointer; transition: background .12s; }
   label.task:hover { background: var(--accent-soft); }
-  label.task input { margin: 0; width: 17px; height: 17px; flex: 0 0 auto; transform: translateY(2px); accent-color: var(--accent); }
-  label.task input:checked ~ .task-text { color: var(--muted); text-decoration: line-through; }
+  label.task input { appearance: none; -webkit-appearance: none; margin: 0;
+    width: 18px; height: 18px; flex: 0 0 auto; transform: translateY(3px);
+    border: 1.5px solid var(--line-strong); border-radius: 6px; background: transparent;
+    position: relative; cursor: pointer; transition: background .15s, border-color .15s; }
+  label.task input:checked { background: var(--accent); border-color: var(--accent); }
+  label.task input:checked::after { content: "✓"; position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: #0a0711; font-size: 12px; font-weight: 800; line-height: 1; }
+  label.task input:focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 2px; }
+  label.task input:checked ~ .task-text { color: var(--faint); text-decoration: line-through; }
   .task-text { flex: 1; }
 
-  /* file refs + code */
-  code, .file { font-family: var(--mono); font-size: 0.88em; }
-  :not(pre) > code, .file { background: var(--code-bg); padding: 1px 6px; border-radius: 6px; }
-  .file { color: var(--accent); white-space: nowrap; }
-  pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: var(--radius);
-    padding: 14px 16px; overflow-x: auto; line-height: 1.5; }
-  pre code { background: none; padding: 0; }
+  /* ── file refs + code ── */
+  code, .file { font-family: var(--mono); font-size: 0.86em; }
+  :not(pre) > code, .file { background: rgba(255,255,255,0.06); padding: 1px 6px;
+    border-radius: 5px; border: 1px solid var(--line); }
+  .file { color: var(--accent-bright); white-space: nowrap; }
+  pre { background: var(--code-bg); border: 1px solid var(--line-strong); border-radius: var(--radius);
+    padding: 16px 18px; overflow-x: auto; line-height: 1.65; color: #cdc7da; }
+  pre code { background: none; padding: 0; border: 0; font-size: 0.84rem; }
 
-  /* callouts */
-  .note, .warn { border-radius: var(--radius); padding: 12px 16px; margin: 14px 0;
-    border: 1px solid var(--line); background: var(--code-bg); }
-  .warn { background: var(--warn-bg); border-color: var(--warn-line); }
+  /* ── callouts (left accent border) ── */
+  .note, .warn { border-radius: var(--radius); padding: 14px 18px; margin: 16px 0;
+    border: 1px solid var(--line); background: rgba(255,255,255,0.03); }
+  .note { background: rgba(90,169,255,0.06); }
+  .warn { background: var(--warn-soft); }
   .note > :first-child, .warn > :first-child { margin-top: 0; }
   .note > :last-child, .warn > :last-child { margin-bottom: 0; }
 
-  /* handoff block */
-  .handoff { border: 1px solid var(--accent); background: var(--accent-soft);
-    border-radius: var(--radius); padding: 16px 20px; margin: 24px 0; }
+  /* ── handoff block ── */
+  .handoff { border: 1px solid var(--line-strong); background: var(--accent-soft);
+    border-radius: var(--radius); padding: 18px 22px; margin: 28px 0; }
   .handoff h2 { margin-top: 0; }
 
-  /* toolbar (screen-only chrome, supplied by the template) */
-  .toolbar { position: fixed; top: 14px; right: 14px; z-index: 50;
-    display: flex; flex-wrap: wrap; gap: 6px; }
-  .toolbar button { font: inherit; font-size: 0.8rem; line-height: 1;
-    color: var(--fg); background: var(--bg); border: 1px solid var(--line);
-    border-radius: 8px; padding: 7px 11px; cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0,0,0,.08); }
-  .toolbar button:hover { background: var(--accent-soft); border-color: var(--accent); }
-
-  /* changelog */
-  .changelog { margin: 28px 0 0; }
+  /* ── changelog ── */
+  .changelog { margin: 32px 0 0; }
   ol.changelog-list { list-style: none; margin: 12px 0; padding: 0;
-    border-left: 2px solid var(--line); }
-  ol.changelog-list li { position: relative; padding: 6px 0 6px 18px; margin: 0;
-    font-size: 0.94rem; }
-  ol.changelog-list li::before { content: ""; position: absolute; left: -5px; top: 13px;
-    width: 8px; height: 8px; border-radius: 999px; background: var(--accent); }
-  ol.changelog-list time { font-family: var(--mono); font-size: 0.82em;
-    color: var(--muted); margin-right: 8px; }
+    border-left: 1px solid var(--line); }
+  ol.changelog-list li { position: relative; padding: 6px 0 6px 20px; margin: 0; font-size: 0.92rem; }
+  ol.changelog-list li::before { content: ""; position: absolute; left: -4px; top: 14px;
+    width: 7px; height: 7px; border-radius: 999px; background: var(--accent);
+    box-shadow: 0 0 8px var(--accent-glow); }
+  ol.changelog-list time { font-family: var(--mono); font-size: 0.8em; color: var(--faint); margin-right: 8px; }
   ol.changelog-list .who { font-weight: 600; }
+  ol.changelog-list .commit { font-family: var(--mono); font-size: 0.8em; margin-left: 8px;
+    color: var(--accent-bright); text-decoration: none;
+    background: var(--accent-soft); padding: 1px 7px; border-radius: 5px; }
+  ol.changelog-list .commit:hover { text-decoration: underline; }
   ol.changelog-list .empty { color: var(--muted); font-style: italic; }
 
-  /* notes (editable scratchpad, persisted + exported) */
-  .notes { margin: 28px 0 0; }
-  .notes-box { min-height: 64px; border: 1px solid var(--line); border-radius: var(--radius);
-    padding: 12px 14px; background: var(--code-bg); line-height: 1.6; white-space: pre-wrap; }
-  .notes-box:focus { outline: none; border-color: var(--accent); }
-  .notes-box:empty::before { content: attr(data-placeholder); color: var(--muted); }
+  /* ── notes (editable scratchpad) ── */
+  .notes { margin: 32px 0 0; }
+  .notes-box { min-height: 72px; border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 14px 16px; background: var(--bg-elev); line-height: 1.65; white-space: pre-wrap; }
+  .notes-box:focus { outline: none; border-color: var(--accent-line);
+    box-shadow: 0 0 0 3px var(--accent-soft); }
+  .notes-box:empty::before { content: attr(data-placeholder); color: var(--faint); }
 
-  h2 { font-size: 1.3rem; margin: 28px 0 10px; }
-  h3 { font-size: 1.08rem; margin: 20px 0 8px; }
-  a { color: var(--accent); }
-  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 0.95rem; }
-  th, td { border: 1px solid var(--line); padding: 8px 12px; text-align: left; vertical-align: top; }
-  th { background: var(--code-bg); }
-  figure.diagram { margin: 18px 0; text-align: center; }
+  /* ── typography & misc ── */
+  h2 { font-size: 1.4rem; letter-spacing: -0.01em; margin: 32px 0 10px; }
+  h3 { font-size: 1.08rem; margin: 22px 0 8px; }
+  p { color: #c8c3d4; }
+  a { color: var(--accent-bright); }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 0.92rem;
+    background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  th, td { border-top: 1px solid var(--line); padding: 11px 15px; text-align: left; vertical-align: top; }
+  thead th { border-top: 0; background: var(--bg-elev-2);
+    font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  tbody td { color: #c8c3d4; }
+  /* long file paths / code must wrap inside cells, else they overflow the rounded (clipped) table */
+  th .file, td .file, th code, td code { white-space: normal; overflow-wrap: anywhere; }
+  figure.diagram { margin: 20px 0; text-align: center; }
   figure.diagram svg { max-width: 100%; height: auto; }
   figure.diagram figcaption { color: var(--muted); font-size: 0.85rem; margin-top: 6px; }
-  hr { border: none; border-top: 1px solid var(--line); margin: 28px 0; }
+  hr { border: none; border-top: 1px solid var(--line); margin: 32px 0; }
 
-  /* print / pdf */
+  @media (max-width: 900px) {
+    .appbar-inner, .layout { padding-left: 20px; padding-right: 20px; }
+    .toc { display: none; }
+    header.plan-head h1 { font-size: 2.1rem; }
+  }
+
+  /* ── print / pdf (clean light render) ── */
   @media print {
-    :root { --bg: #fff; --fg: #000; --muted: #444; }
+    :root { --bg: #fff; --fg: #000; --muted: #444; --faint: #666;
+      --line: #ddd; --line-strong: #ccc; --bg-elev: #fff; --bg-elev-2: #f5f5f7;
+      --code-bg: #f5f5f7; --accent: #6b3fc4; --accent-bright: #6b3fc4; }
     body { font-size: 12pt; }
-    .wrap { max-width: none; padding: 0; }
-    .progress { position: static; }
+    body::before { display: none; }
+    .appbar, .toolbar, .toc { display: none !important; }
+    .layout { max-width: none; padding: 0; display: block; }
+    .plan-main { flex: none; }
     details.phase { break-inside: avoid; border-color: #bbb; }
-    details.phase > summary::before { display: none; }
+    details.phase > summary::after { display: none; }
     label.task:hover, details.phase > summary:hover { background: none; }
-    .handoff { break-inside: avoid; }
-    .changelog { break-inside: avoid; }
-    .toolbar { display: none; }
+    .handoff, .changelog { break-inside: avoid; }
     a { color: #000; text-decoration: underline; }
+    p, tbody td { color: #000; }
   }
 </style>
 </head>
 <body>
-<nav class="toolbar" aria-label="Plan controls">
-  <button type="button" id="pc-expand">Expand all</button>
-  <button type="button" id="pc-collapse">Collapse all</button>
-  <button type="button" id="pc-copy-remaining">Copy remaining as prompt</button>
-  <button type="button" id="pc-copy-md">Copy as Markdown</button>
-  <button type="button" id="pc-reset">Reset progress</button>
-</nav>
-<div class="wrap">
+<header class="appbar">
+  <div class="appbar-inner">
+    <div class="docmeta">
+      <span class="doc-title"><!--PLAN_TITLE--></span>
+      <span class="brand-sep" id="pc-doc-sep" hidden></span>
+      <span class="doc-date" id="pc-doc-date"></span>
+    </div>
+    <div class="appbar-tools">
+      <div class="appbar-progress" aria-hidden="true">
+        <span class="label" id="pc-progress-label"></span>
+        <div class="mini"><span id="pc-progress-fill"></span></div>
+      </div>
+      <nav class="toolbar" aria-label="Plan controls">
+        <button type="button" id="pc-expand">Expand all</button>
+        <button type="button" id="pc-collapse">Collapse all</button>
+        <button type="button" id="pc-copy-remaining">Copy remaining as prompt</button>
+        <button type="button" id="pc-copy-md">Copy as Markdown</button>
+        <button type="button" id="pc-reset">Reset progress</button>
+      </nav>
+    </div>
+  </div>
+</header>
+<div class="layout">
+  <main class="plan-main">
 <!--PLAN_BODY-->
-<section class="notes" aria-label="Notes">
-  <h2>Notes</h2>
-  <div id="pc-notes" class="notes-box" contenteditable="true" data-placeholder="Jot progress, blockers, or decisions here — saved in this browser and included when you copy the plan."></div>
-</section>
+    <section class="notes" aria-label="Notes">
+      <h2>Notes</h2>
+      <div id="pc-notes" class="notes-box" contenteditable="true" data-placeholder="Jot progress, blockers, or decisions here — saved in this browser and included when you copy the plan."></div>
+    </section>
+  </main>
+  <aside class="toc" id="pc-toc" hidden aria-label="Contents">
+    <div class="toc-title">Contents</div>
+    <nav class="toc-nav" id="pc-toc-nav"></nav>
+  </aside>
 </div>
 
 <script>
@@ -181,7 +286,7 @@
   var boxes = Array.prototype.slice.call(document.querySelectorAll('label.task input[type=checkbox]'));
   boxes.forEach(function (b, i) { b.dataset.idx = i; });
 
-  // restore
+  // restore checkbox state
   var saved = {};
   try { saved = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
   boxes.forEach(function (b, i) { if (saved[i]) b.checked = true; });
@@ -192,25 +297,101 @@
     try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
   }
 
-  // progress bar
+  // progress bar (app bar)
   var fill = document.getElementById('pc-progress-fill');
   var label = document.getElementById('pc-progress-label');
   function updateProgress() {
-    if (!boxes.length) return;
+    if (!boxes.length) { if (label) label.textContent = ""; return; }
     var done = boxes.filter(function (b) { return b.checked; }).length;
     var pct = Math.round((done / boxes.length) * 100);
     if (fill) fill.style.width = pct + "%";
-    if (label) label.textContent = done + " / " + boxes.length + " tasks done · " + pct + "%";
+    if (label) label.textContent = done + " / " + boxes.length + " · " + pct + "%";
   }
-
   boxes.forEach(function (b) {
     b.addEventListener('change', function () { persist(); updateProgress(); });
   });
   updateProgress();
 
-  // toolbar controls (supplied by the template, screen-only)
+  // app-bar last-changed date — taken from the newest changelog entry
+  var docDate = document.getElementById('pc-doc-date');
+  var docSep = document.getElementById('pc-doc-sep');
+  var firstChange = document.querySelector('#pc-changelog-list time');
+  if (docDate && firstChange) {
+    var d = firstChange.textContent.trim();
+    if (d) { docDate.textContent = 'Updated ' + d; if (docSep) docSep.hidden = false; }
+  }
+
+  // ── shorten long file paths to the basename (full path kept on hover + in exports) ──
+  function baseName(p) {
+    var s = p.replace(/[\/\\]+$/, '');
+    var parts = s.split(/[\/\\]/);
+    return parts[parts.length - 1] || p;
+  }
+  document.querySelectorAll('.file').forEach(function (f) {
+    var full = f.textContent.replace(/\s+/g, ' ').trim();
+    if (full.length > 30 && /[\/\\]/.test(full)) {
+      f.setAttribute('data-full', full);
+      f.title = full;
+      f.textContent = baseName(full);
+    }
+  });
+  // read an element's text with any shortened .file paths expanded back to full (for exports)
+  function fullText(el) {
+    var clone = el.cloneNode(true);
+    clone.querySelectorAll('[data-full]').forEach(function (f) {
+      f.textContent = f.getAttribute('data-full');
+    });
+    return clone.textContent.replace(/\s+/g, ' ').trim();
+  }
+
+  // ── contents rail: built from phase summaries ──
+  var phases = Array.prototype.slice.call(document.querySelectorAll('details.phase'));
+  var tocEl = document.getElementById('pc-toc');
+  var tocNav = document.getElementById('pc-toc-nav');
+  var links = [];
+  if (phases.length >= 2 && tocNav) {
+    phases.forEach(function (ph, i) {
+      if (!ph.id) ph.id = 'phase-' + (i + 1);
+      var sum = ph.querySelector('summary');
+      var numEl = sum && sum.querySelector('.phase-num');
+      var num = numEl ? numEl.textContent.replace(/\D+/g, '') : String(i + 1);
+      // label text without the leading number span
+      var txt = sum ? sum.textContent : ('Phase ' + (i + 1));
+      if (numEl) txt = txt.replace(numEl.textContent, '');
+      txt = txt.replace(/\s+/g, ' ').trim();
+      var a = document.createElement('a');
+      a.href = '#' + ph.id;
+      var nEl = document.createElement('span'); nEl.className = 'n'; nEl.textContent = num || (i + 1);
+      var tEl = document.createElement('span'); tEl.textContent = txt;
+      a.appendChild(nEl); a.appendChild(tEl);
+      a.addEventListener('click', function (e) {
+        e.preventDefault();
+        ph.open = true;
+        ph.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      tocNav.appendChild(a);
+      links.push({ a: a, ph: ph });
+    });
+    tocEl.hidden = false;
+
+    var ticking = false;
+    function spy() {
+      ticking = false;
+      var cur = links[0];
+      links.forEach(function (l) {
+        if (l.ph.getBoundingClientRect().top <= 110) cur = l;
+      });
+      links.forEach(function (l) { l.a.classList.toggle('active', l === cur); });
+    }
+    window.addEventListener('scroll', function () {
+      if (!ticking) { ticking = true; window.requestAnimationFrame(spy); }
+    }, { passive: true });
+    spy();
+  }
+
+  // toolbar controls (screen-only)
   function setAllPhases(open) {
-    document.querySelectorAll('details.phase').forEach(function (d) { d.open = open; });
+    phases.forEach(function (d) { d.open = open; });
   }
   var btnExpand = document.getElementById('pc-expand');
   var btnCollapse = document.getElementById('pc-collapse');
@@ -241,23 +422,23 @@
     return h ? h.textContent.replace(/\s+/g, ' ').trim() : 'Plan';
   }
   function collectPhases(remainingOnly) {
-    var phases = [];
-    document.querySelectorAll('details.phase').forEach(function (ph) {
+    var out = [];
+    phases.forEach(function (ph) {
       var sum = ph.querySelector('summary');
       var title = sum ? sum.textContent.replace(/\s+/g, ' ').trim() : '';
       var tasks = [];
       ph.querySelectorAll('label.task').forEach(function (l) {
         var cb = l.querySelector('input[type=checkbox]');
         var tEl = l.querySelector('.task-text') || l;
-        var txt = tEl.textContent.replace(/\s+/g, ' ').trim();
+        var txt = fullText(tEl);
         var done = !!(cb && cb.checked);
         if (remainingOnly && done) return;
         if (txt) tasks.push({ done: done, txt: txt });
       });
       if (remainingOnly && !tasks.length) return; // skip finished phases
-      phases.push({ title: title, tasks: tasks });
+      out.push({ title: title, tasks: tasks });
     });
-    return phases;
+    return out;
   }
   function toMarkdown() {
     var out = ['# ' + planTitle(), ''];
@@ -271,8 +452,8 @@
     return out.join('\n').trim() + '\n';
   }
   function toPrompt() {
-    var phases = collectPhases(true);
-    var remaining = phases.reduce(function (s, p) { return s + p.tasks.length; }, 0);
+    var ph = collectPhases(true);
+    var remaining = ph.reduce(function (s, p) { return s + p.tasks.length; }, 0);
     var out = [];
     if (!remaining) {
       out.push('All tasks in "' + planTitle() + '" are checked off — nothing left to do.');
@@ -280,7 +461,7 @@
       out.push('Pick up this plan in progress and complete the remaining tasks below. '
         + 'Keep the existing structure; check the referenced files before editing.', '');
       out.push('Plan: ' + planTitle(), '');
-      phases.forEach(function (p) {
+      ph.forEach(function (p) {
         out.push('## ' + p.title);
         p.tasks.forEach(function (t) { out.push('- ' + t.txt); });
         out.push('');
@@ -326,9 +507,7 @@
   var collapsedForPrint = [];
   window.addEventListener('beforeprint', function () {
     collapsedForPrint = [];
-    document.querySelectorAll('details.phase:not([open])').forEach(function (d) {
-      collapsedForPrint.push(d); d.open = true;
-    });
+    phases.forEach(function (d) { if (!d.open) { collapsedForPrint.push(d); d.open = true; } });
   });
   window.addEventListener('afterprint', function () {
     collapsedForPrint.forEach(function (d) { d.open = false; });

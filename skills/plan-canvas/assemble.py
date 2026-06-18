@@ -44,6 +44,41 @@ def git_user_name() -> str:
     return ""
 
 
+def git_short_sha(ref: str = "HEAD") -> str:
+    """Short SHA for a ref via git; empty string if unavailable."""
+    try:
+        out = subprocess.run(["git", "rev-parse", "--short", ref],
+                             capture_output=True, text=True, timeout=3)
+        if out.returncode == 0:
+            return out.stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return ""
+
+
+def git_remote_commit_url(sha: str) -> str:
+    """Best-effort web URL for a commit on the `origin` remote (GitHub/GitLab/
+    Bitbucket, ssh or https). Empty string if it can't be derived."""
+    if not sha:
+        return ""
+    try:
+        out = subprocess.run(["git", "remote", "get-url", "origin"],
+                             capture_output=True, text=True, timeout=3)
+        if out.returncode != 0:
+            return ""
+        url = out.stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    m = re.match(r"git@([^:]+):(.+?)(?:\.git)?$", url)
+    if not m:
+        m = re.match(r"https?://(?:[^@]+@)?([^/]+)/(.+?)(?:\.git)?$", url)
+    if not m:
+        return ""
+    host, path = m.group(1), m.group(2)
+    seg = "commits" if "bitbucket" in host else "commit"
+    return "https://{}/{}/{}/{}".format(host, path, seg, sha)
+
+
 def slugify(text: str) -> str:
     text = re.sub(r"[^\w\s-]", "", text.lower()).strip()
     text = re.sub(r"[\s_-]+", "-", text)
@@ -74,16 +109,24 @@ def extract_prior_changelog(output_path: str) -> str:
     return inner.strip()
 
 
-def build_change_entry(change: str, author: str, date: str) -> str:
+def build_change_entry(change: str, author: str, date: str,
+                       commit: str = "", commit_url: str = "") -> str:
     bits = ['<time>{}</time>'.format(html.escape(date))]
     if author:
         bits.append('<span class="who">{}</span>'.format(html.escape(author)))
     bits.append("— " + html.escape(change))
+    if commit:
+        if commit_url:
+            bits.append('<a class="commit" href="{}">{}</a>'.format(
+                html.escape(commit_url), html.escape(commit)))
+        else:
+            bits.append('<code class="commit">{}</code>'.format(html.escape(commit)))
     return "<li>" + " ".join(bits) + "</li>"
 
 
 def inject_changelog(body: str, output_path: str, change: str,
-                     author: str, date: str) -> str:
+                     author: str, date: str,
+                     commit: str = "", commit_url: str = "") -> str:
     """Fill the body's changelog placeholder with a merged history.
 
     New entry (if a --change was given, or an auto 'Initial plan.' on first
@@ -103,9 +146,9 @@ def inject_changelog(body: str, output_path: str, change: str,
 
     entries = []
     if change:
-        entries.append(build_change_entry(change, author, date))
+        entries.append(build_change_entry(change, author, date, commit, commit_url))
     elif first_generation:
-        entries.append(build_change_entry("Initial plan.", author, date))
+        entries.append(build_change_entry("Initial plan.", author, date, commit, commit_url))
 
     merged = "\n".join(entries + ([prior] if prior else []))
     if not merged:
@@ -137,6 +180,10 @@ def main() -> int:
                     help="who made the change (changelog entry); defaults to the owner")
     ap.add_argument("--date", default=datetime.date.today().isoformat(),
                     help="date for the changelog entry (default: today, YYYY-MM-DD)")
+    ap.add_argument("--commit", default=None,
+                    help="commit ref shown on the changelog entry; pass a SHA, or "
+                         "'auto'/'HEAD' to use the current HEAD short SHA. Linked to "
+                         "the origin remote when one can be derived.")
     args = ap.parse_args()
 
     with open(args.body, encoding="utf-8") as f:
@@ -149,10 +196,16 @@ def main() -> int:
     owner = args.owner if args.owner is not None else git_user_name()
     body = body.replace(OWNER_PLACEHOLDER, html.escape(owner))
 
+    # Resolve the commit ref (explicit SHA, or auto/HEAD -> current short SHA).
+    commit = args.commit or ""
+    if commit.lower() in ("auto", "head"):
+        commit = git_short_sha("HEAD")
+    commit_url = git_remote_commit_url(commit) if commit else ""
+
     # Merge changelog history before the output file is overwritten below.
     author = args.author if args.author is not None else owner
     body = inject_changelog(body, args.output, args.change or "",
-                            author or "", args.date)
+                            author or "", args.date, commit, commit_url)
 
     title = args.title or derive_title(body, args.output)
     plan_id = slugify(os.path.splitext(os.path.basename(args.output))[0])
