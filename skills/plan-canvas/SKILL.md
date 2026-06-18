@@ -25,7 +25,12 @@ The user is a team lead who hands plans to developers or agents and wants HTML i
    rm plans/.plan-body.html
    ```
    - Output goes in **`./plans/`** (project-relative), created if missing.
-   - `<slug>` is kebab-case (e.g. `auth-rate-limiting.html`). The slug also keys localStorage, so keep filenames stable across regenerations to preserve a teammate's checkbox progress.
+   - **Choosing `<slug>`** (kebab-case `.html`) — derive it in this priority:
+     1. A **Jira ticket** if one is mentioned anywhere in the conversation, e.g. `PROJ-1234` → `proj-1234.html` (optionally append a short topic: `proj-1234-auth-rate-limiting.html`).
+     2. Else the **current git branch** — `git rev-parse --abbrev-ref HEAD`, with any `feature/`, `fix/`, etc. prefix stripped and the rest slugified (branch `feature/ABC-12-rate-limit` → `abc-12-rate-limit.html`).
+     3. Else a **topic slug** you derive from the plan itself (e.g. `auth-rate-limiting.html`).
+
+     The slug also keys localStorage, so it must stay stable across regenerations to preserve a teammate's checkbox progress — a ticket or branch is ideal because it's tied to the work, not the wording, so revisions land on the same file.
    - `--title` is optional; if omitted it's derived from the first `<h1>`.
    - `--change` / `--author` add a dated changelog entry (see *Revising* below). On a brand-new plan you can pass `--change "Initial plan."` or omit it — the script auto-seeds an "Initial plan." entry on first generation.
 
