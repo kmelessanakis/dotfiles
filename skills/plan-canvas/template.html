@@ -6,32 +6,35 @@
 <title><!--PLAN_TITLE--></title>
 <style>
   :root {
-    /* dark, purple-tinted handoff theme */
-    --bg: #0a0711;
-    --bg-elev: #14101f;          /* card / table / code surfaces */
-    --bg-elev-2: #0e0b18;
-    --fg: #ece9f1;
-    --muted: #9b93ab;
-    --faint: #6b6479;
-    --line: rgba(255,255,255,0.08);
-    --line-strong: rgba(255,255,255,0.13);
+    /* neutral charcoal handoff theme — purple is used sparingly as the one accent */
+    --bg: #08090b;
+    --bg-elev: #101216;          /* card / table / code surfaces (neutral) */
+    --bg-elev-2: #0c0d11;
+    --fg: #e9eaec;
+    --body: #c8cbd1;             /* paragraph / table body text */
+    --muted: #9a9ea7;
+    --faint: #686d76;
+    --line: rgba(255,255,255,0.07);
+    --line-strong: rgba(255,255,255,0.12);
 
-    /* purple accent sampled from the brand gradient (#8a62c6 → lifted for dark UI) */
-    --accent: #9a73e0;
-    --accent-bright: #b89bf0;
-    --accent-soft: rgba(138,98,198,0.13);
-    --accent-line: rgba(154,115,224,0.34);
-    --accent-glow: rgba(138,98,198,0.55);
+    /* sage-green accent (matches kmelessanakis.com) — reserved for true accents.
+       --accent is the brand rgb(71,102,81); --accent-bright is lifted for legible
+       text/links on the near-black background. */
+    --accent: #476651;
+    --accent-bright: #7aa88a;
+    --accent-soft: rgba(122,168,138,0.12);
+    --accent-line: rgba(122,168,138,0.30);
+    --accent-glow: rgba(71,102,81,0.55);
 
     --done: #3ecf8e;
     --doing: var(--accent-bright);
-    --todo: #9b93ab;
+    --todo: #9a9ea7;
     --warn: #e0a84a;
-    --warn-soft: rgba(224,168,74,0.10);
-    --warn-line: rgba(224,168,74,0.34);
-    --info: #5aa9ff;
+    --warn-soft: rgba(224,168,74,0.08);
+    --warn-line: rgba(224,168,74,0.30);
+    --info: #4aa3ff;
 
-    --code-bg: #0e0b18;
+    --code-bg: #0c0d11;
     --radius: 12px;
     --maxw: 1600px;
     --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
@@ -45,19 +48,17 @@
     -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
     min-height: 100vh; position: relative;
   }
-  /* soft purple glows echoing the brand gradient */
+  /* one restrained green glow, top-right (like the reference's single accent glow) */
   body::before {
     content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
-    background:
-      radial-gradient(1000px 520px at 86% -10%, rgba(138,98,198,0.18), transparent 60%),
-      radial-gradient(760px 620px at 6% 112%, rgba(138,98,198,0.12), transparent 56%);
+    background: radial-gradient(1100px 560px at 84% -12%, rgba(95,135,108,0.08), transparent 62%);
   }
-  ::selection { background: rgba(154,115,224,0.32); }
+  ::selection { background: rgba(122,168,138,0.28); }
 
   /* ── app bar (chrome — sticky, holds brand + controls + progress) ── */
   .appbar { position: sticky; top: 0; z-index: 40;
-    backdrop-filter: saturate(150%) blur(12px);
-    background: rgba(12,10,18,0.82);
+    backdrop-filter: saturate(140%) blur(12px);
+    background: rgba(10,11,14,0.82);
     border-bottom: 1px solid var(--line); }
   .appbar-inner { max-width: var(--maxw); margin: 0 auto;
     padding: 12px 32px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
@@ -130,7 +131,7 @@
     font-size: 1.3em; line-height: 1; transition: transform .18s ease; }
   details.phase[open] > summary::after { transform: rotate(90deg); }
   details.phase > summary:hover { background: var(--accent-soft); }
-  .phase-num { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums;
+  .phase-num { color: var(--accent-bright); font-weight: 700; font-variant-numeric: tabular-nums;
     letter-spacing: 0.02em; }
   .phase-body { padding: 4px 20px 20px; border-top: 1px solid var(--line); }
 
@@ -147,7 +148,7 @@
   label.task input:checked { background: var(--accent); border-color: var(--accent); }
   label.task input:checked::after { content: "✓"; position: absolute; inset: 0;
     display: flex; align-items: center; justify-content: center;
-    color: #0a0711; font-size: 12px; font-weight: 800; line-height: 1; }
+    color: #f3f5f4; font-size: 12px; font-weight: 800; line-height: 1; }
   label.task input:focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 2px; }
   label.task input:checked ~ .task-text { color: var(--faint); text-decoration: line-through; }
   .task-text { flex: 1; }
@@ -156,9 +157,9 @@
   code, .file { font-family: var(--mono); font-size: 0.86em; }
   :not(pre) > code, .file { background: rgba(255,255,255,0.06); padding: 1px 6px;
     border-radius: 5px; border: 1px solid var(--line); }
-  .file { color: var(--accent-bright); white-space: nowrap; }
+  .file { color: var(--body); white-space: nowrap; }
   pre { background: var(--code-bg); border: 1px solid var(--line-strong); border-radius: var(--radius);
-    padding: 16px 18px; overflow-x: auto; line-height: 1.65; color: #cdc7da; }
+    padding: 16px 18px; overflow-x: auto; line-height: 1.65; color: var(--body); }
   pre code { background: none; padding: 0; border: 0; font-size: 0.84rem; }
 
   /* ── callouts (left accent border) ── */
@@ -201,14 +202,14 @@
   /* ── typography & misc ── */
   h2 { font-size: 1.4rem; letter-spacing: -0.01em; margin: 32px 0 10px; }
   h3 { font-size: 1.08rem; margin: 22px 0 8px; }
-  p { color: #c8c3d4; }
+  p { color: var(--body); }
   a { color: var(--accent-bright); }
   table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 0.92rem;
     background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
   th, td { border-top: 1px solid var(--line); padding: 11px 15px; text-align: left; vertical-align: top; }
   thead th { border-top: 0; background: var(--bg-elev-2);
     font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
-  tbody td { color: #c8c3d4; }
+  tbody td { color: var(--body); }
   /* long file paths / code must wrap inside cells, else they overflow the rounded (clipped) table */
   th .file, td .file, th code, td code { white-space: normal; overflow-wrap: anywhere; }
   figure.diagram { margin: 20px 0; text-align: center; }
@@ -226,7 +227,7 @@
   @media print {
     :root { --bg: #fff; --fg: #000; --muted: #444; --faint: #666;
       --line: #ddd; --line-strong: #ccc; --bg-elev: #fff; --bg-elev-2: #f5f5f7;
-      --code-bg: #f5f5f7; --accent: #6b3fc4; --accent-bright: #6b3fc4; }
+      --code-bg: #f5f5f7; --accent: #355c44; --accent-bright: #355c44; }
     body { font-size: 12pt; }
     body::before { display: none; }
     .appbar, .toolbar, .toc { display: none !important; }
